@@ -69,9 +69,14 @@ defmodule WithoutTest do
                |> Without.fresult()
     end
 
-    @tag :skip
     test "assigns ok results to internal struct" do
-      assert result = "foo" |> Without.finit()
+      assert result =
+               "foo"
+               |> Without.fmap_ok(fn arg -> {:ok, "hello #{arg}"} end, assign: :message)
+               |> Without.fmap_ok(fn -> {:ok, "one more function call"} end, assign: :one_more)
+
+      assert result.assigns[:message] == "hello foo"
+      assert result.assigns[:one_more] == "one more function call"
     end
   end
 
