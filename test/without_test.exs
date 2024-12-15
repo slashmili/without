@@ -78,6 +78,21 @@ defmodule WithoutTest do
       assert result.assigns[:message] == "hello foo"
       assert result.assigns[:one_more] == "one more function call"
     end
+
+    test "provides assigns as 2rd argument" do
+      assert {:ok, :done} =
+               :first
+               |> Without.fmap_ok(fn _arg -> {:ok, :second} end, assign: :second_value)
+               |> Without.fmap_ok(fn _arg -> {:ok, :third} end, assign: :third_value)
+               |> Without.fmap_ok(fn arg, assigns ->
+                 if arg == :third && assigns[:second_value] == :second do
+                   {:ok, :done}
+                 else
+                   {:error, :nope}
+                 end
+               end)
+               |> Without.fresult()
+    end
   end
 
   describe "fmap_error/2" do

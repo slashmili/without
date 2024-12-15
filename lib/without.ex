@@ -39,6 +39,18 @@ defmodule Without do
     end
   end
 
+  def fmap_ok(%Without{} = context, func, opts) when is_function(func, 2) do
+    case func.(context.value, context.assigns) do
+      {:ok, value} ->
+        context
+        |> put_ok_result(value)
+        |> maybe_assign(value, opts)
+
+      {:error, error} ->
+        %{context | result: :error, value: error}
+    end
+  end
+
   def fmap_ok(value, func, opts) do
     value
     |> finit
