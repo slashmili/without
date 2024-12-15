@@ -28,39 +28,15 @@ defmodule Without do
   end
 
   def fmap_ok(%Without{} = context, func, opts) when is_function(func, 0) do
-    case func.() do
-      {:ok, value} ->
-        context
-        |> put_ok_result(value)
-        |> maybe_assign(value, opts)
-
-      {:error, error} ->
-        %{context | result: :error, value: error}
-    end
+    process_result(func.(), context, opts)
   end
 
   def fmap_ok(%Without{} = context, func, opts) when is_function(func, 1) do
-    case func.(context.value) do
-      {:ok, value} ->
-        context
-        |> put_ok_result(value)
-        |> maybe_assign(value, opts)
-
-      {:error, error} ->
-        %{context | result: :error, value: error}
-    end
+    process_result(func.(context.value), context, opts)
   end
 
   def fmap_ok(%Without{} = context, func, opts) when is_function(func, 2) do
-    case func.(context.value, context.assigns) do
-      {:ok, value} ->
-        context
-        |> put_ok_result(value)
-        |> maybe_assign(value, opts)
-
-      {:error, error} ->
-        %{context | result: :error, value: error}
-    end
+    process_result(func.(context.value, context.assigns), context, opts)
   end
 
   def fmap_ok(value, func, opts)
@@ -83,22 +59,28 @@ defmodule Without do
     end
   end
 
+  @spec fmap_error(t, map_func) :: t
   def fmap_error(%Without{result: :ok} = context, _func) do
     context
   end
 
-  @spec fmap_error(t, map_func) :: t
   def fmap_error(%Without{} = context, func) when is_function(func, 0) do
-    case func.() do
-      {:ok, value} -> %{context | result: :ok, value: value}
-      {:error, error} -> %{context | result: :error, value: error}
-    end
+    process_result(func.(), context)
   end
 
   def fmap_error(%Without{} = context, func) when is_function(func, 1) do
-    case func.(context.value) do
-      {:ok, value} -> %{context | result: :ok, value: value}
-      {:error, error} -> %{context | result: :error, value: error}
+    process_result(func.(context.value), context)
+  end
+
+  defp process_result(result, context, opts \\ []) do
+    case result do
+      {:ok, value} ->
+        context
+        |> put_ok_result(value)
+        |> maybe_assign(value, opts)
+
+      {:error, error} ->
+        %{context | result: :error, value: error}
     end
   end
 end
