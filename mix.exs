@@ -13,7 +13,7 @@ defmodule Without.MixProject do
       name: "Without",
       description: "Error handling made readable",
       package: package(),
-      docs: [source_ref: "v#{@version}"],
+      docs: [source_ref: "v#{@version}", main: "Without"],
       source_url: "https://github.com/slashmili/without"
     ]
   end
