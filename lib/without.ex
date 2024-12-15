@@ -27,6 +27,12 @@ defmodule Without do
     end
   end
 
+  def fmap_ok(value, func) do
+    value
+    |> finit
+    |> fmap_ok(func)
+  end
+
   def fmap_error(%Without{result: :ok} = context, _func) do
     context
   end

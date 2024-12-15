@@ -27,6 +27,10 @@ defmodule WithoutTest do
   end
 
   describe "fmap_ok/2" do
+    test "creates Without struct if the first argument is a value" do
+      assert %Without{} = "foo" |> Without.fmap_ok(fn name -> {:ok, "hello #{name}"} end)
+    end
+
     test "skips executing when input is error tuple" do
       assert {:error, :oops} =
                {:error, :oops}
@@ -63,6 +67,11 @@ defmodule WithoutTest do
                  end
                end)
                |> Without.fresult()
+    end
+
+    @tag :skip
+    test "assigns ok results to internal struct" do
+      assert result = "foo" |> Without.finit()
     end
   end
 
