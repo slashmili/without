@@ -1,28 +1,37 @@
 defmodule Without.MixProject do
   use Mix.Project
 
+  @version "0.1.0"
+
   def project do
     [
       app: :without,
-      version: "0.1.0",
-      elixir: "~> 1.17",
+      version: @version,
+      elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      name: "Without",
+      description: "Error handling made readable",
+      package: package(),
+      docs: [source_ref: "v#{@version}"],
+      source_url: "https://github.com/slashmili/without"
     ]
   end
 
-  # Run "mix help compile.app" to learn about applications.
   def application do
-    [
-      extra_applications: [:logger]
-    ]
+    [extra_applications: [:logger]]
   end
 
-  # Run "mix help deps" to learn about dependencies.
-  defp deps do
+  def deps do
+    [{:ex_doc, "~> 0.34", only: :dev, runtime: false}]
+  end
+
+  def package do
     [
-      # {:dep_from_hexpm, "~> 0.3.0"},
-      # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
+      maintainers: ["Milad Rastian"],
+      name: "without",
+      licenses: ["Apache-2.0"],
+      links: %{"GitHub" => "https://github.com/slashmili/without"}
     ]
   end
 end
