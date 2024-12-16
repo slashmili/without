@@ -43,10 +43,56 @@ defmodule Without do
   ```
 
   If you are a functional programming aficionado, it might resemble monadic error handling.
-  """
-  defstruct [:value, :result, :assigns]
 
-  @type t :: %Without{value: any, result: :ok | :error, assigns: map}
+  One more thing! `Without` is a lazy operator. It means your pipeline won't be executed until `Without.fresult/1` is called.
+  It gives you the flexibility to build your pipeline by passing it around different module/functions and execute them on the last step.
+
+  > WORD OF CAUTION: Use the following snippet with cautious, I haven't used this technique and might make your code complex and unreadable
+
+
+  ```
+  def fetch_user(user, %Without{} = without) do
+    without
+    # Fetch it from somewhere if only previous steps are :ok!
+    |> Without.fmap_ok(fn -> {:ok, user} end, assign: :user)
+  end
+
+  def fetch_friends(%Without{} = without) do
+    without
+    # Fetch it from somewhere if only previous steps are :ok!
+    |> Without.fmap_ok(
+      fn _, assigns -> {:ok, ["#{assigns[:user]}-f01", "#{assigns[:user]}-f01"]} end,
+      assign: :friends
+    )
+  end
+
+  def index(conn, _) do
+    required_external_calls = Without.finit(nil)
+    # do other things.....
+    required_external_calls = fetch_user("milad", required_external_calls)
+    # do something else ...
+    required_external_calls = fetch_friends(required_external_calls)
+
+    {:ok, conn} =
+      required_external_calls
+      |> Without.fmap_ok(fn friends ->
+        conn = render(conn, friends: friends)
+        {:ok, conn}
+      end)
+      |> Without.fmap_error(fn error ->
+        Logger.error("failed to make external calls due to #{error}")
+        conn = render(conn, error: error)
+        {:ok, conn}
+      end)
+      |> Without.fresult()
+
+    conn
+  end
+  ```
+  """
+  defstruct [:value, :result, :assigns, :steps]
+
+  @type t :: %Without{value: any, result: :ok | :error, assigns: map, steps: list}
   @type options :: [assign: atom]
 
   @type error :: {:error, any()}
@@ -56,12 +102,28 @@ defmodule Without do
   @type map_func :: (-> result) | (any() -> result) | (any(), map() -> result)
 
   @spec finit(ok | error | any) :: t
-  def finit({:ok, value}), do: %Without{value: value, result: :ok, assigns: %{}}
-  def finit({:error, value}), do: %Without{value: value, result: :error, assigns: %{}}
-  def finit(value), do: %Without{value: value, result: :ok, assigns: %{}}
+  def finit({:ok, value}), do: %Without{value: value, result: :ok, assigns: %{}, steps: []}
+  def finit({:error, value}), do: %Without{value: value, result: :error, assigns: %{}, steps: []}
+  def finit(value), do: %Without{value: value, result: :ok, assigns: %{}, steps: []}
 
   @spec fresult(t) :: {:ok, any} | {:error, any}
-  def fresult(%Without{result: result, value: value}) do
+  def fresult(%Without{steps: steps} = context) do
+    %Without{result: result, value: value} =
+      steps
+      |> Enum.reduce(context, fn
+        {func, arity, opts}, context ->
+          case arity do
+            0 ->
+              process_result(func.(), context, opts)
+
+            1 ->
+              process_result(func.(context.value), context, opts)
+
+            2 ->
+              process_result(func.(context.value, context.assigns), context, opts)
+          end
+      end)
+
     {result, value}
   end
 
@@ -73,15 +135,18 @@ defmodule Without do
   end
 
   def fmap_ok(%Without{} = context, func, opts) when is_function(func, 0) do
-    process_result(func.(), context, opts)
+    steps = context.steps ++ [{func, 0, opts}]
+    %{context | steps: steps}
   end
 
   def fmap_ok(%Without{} = context, func, opts) when is_function(func, 1) do
-    process_result(func.(context.value), context, opts)
+    steps = context.steps ++ [{func, 1, opts}]
+    %{context | steps: steps}
   end
 
   def fmap_ok(%Without{} = context, func, opts) when is_function(func, 2) do
-    process_result(func.(context.value, context.assigns), context, opts)
+    steps = context.steps ++ [{func, 2, opts}]
+    %{context | steps: steps}
   end
 
   def fmap_ok(value, func, opts)

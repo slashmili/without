@@ -70,13 +70,15 @@ defmodule WithoutTest do
     end
 
     test "assigns ok results to internal struct" do
-      assert result =
+      assert {:ok, assigns} =
                "foo"
                |> Without.fmap_ok(fn arg -> {:ok, "hello #{arg}"} end, assign: :message)
                |> Without.fmap_ok(fn -> {:ok, "one more function call"} end, assign: :one_more)
+               |> Without.fmap_ok(fn _, assigns -> {:ok, assigns} end)
+               |> Without.fresult()
 
-      assert result.assigns[:message] == "hello foo"
-      assert result.assigns[:one_more] == "one more function call"
+      assert assigns[:message] == "hello foo"
+      assert assigns[:one_more] == "one more function call"
     end
 
     test "provides assigns as 2rd argument" do
