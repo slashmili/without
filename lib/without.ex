@@ -66,6 +66,19 @@ defmodule Without do
     )
   end
 
+  def render(%Without{} = without) do
+    without
+    |> Without.fmap_ok(fn friends ->
+      conn = render(conn, friends: friends)
+      {:ok, conn}
+    end)
+    |> Without.fmap_error(fn error ->
+      Logger.error("failed to make external calls due to #{error}")
+      conn = render(conn, error: error)
+      {:ok, conn}
+    end)
+  end
+
   def index(conn, _) do
     required_external_calls = Without.finit(nil)
     # do other things.....
@@ -73,17 +86,9 @@ defmodule Without do
     # do something else ...
     required_external_calls = fetch_friends(required_external_calls)
 
-    {:ok, conn} =
+    {:ok, conn} = 
       required_external_calls
-      |> Without.fmap_ok(fn friends ->
-        conn = render(conn, friends: friends)
-        {:ok, conn}
-      end)
-      |> Without.fmap_error(fn error ->
-        Logger.error("failed to make external calls due to #{error}")
-        conn = render(conn, error: error)
-        {:ok, conn}
-      end)
+      |> render()
       |> Without.fresult()
 
     conn
